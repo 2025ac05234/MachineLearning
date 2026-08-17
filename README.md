@@ -6,8 +6,9 @@ Five classification models trained on the Breast Cancer Wisconsin (Diagnostic)
 dataset, compared on six evaluation metrics and served through an interactive
 Streamlit application.
 
-🔗 **Live app:** https://github.com/2025ac05234/MachineLearning.git
-🔗 **Repository:** `<PASTE YOUR GITHUB REPO URL HERE>`
+🔗 **Live app:** https://machinelearninggit-qgztvpr6mlccwmn8yw5nfy.streamlit.app/
+🔗 **Repository:** https://github.com/2025ac05234/MachineLearning.git
+
 
 ---
 
@@ -129,8 +130,6 @@ python model/train_models.py     # retrains, rewrites artifacts/ and test_data.c
 streamlit run app.py             # opens the app at localhost:8501
 ```
 
-The seed is fixed at 17 throughout, so a rerun reproduces every figure in this
-README exactly.
 
 ---
 
@@ -190,7 +189,7 @@ member of the family is the correct choice here.
 
 ## e. Streamlit Application
 
-**Live app:** `<PASTE YOUR STREAMLIT APP URL HERE>`
+**Live app:** https://machinelearninggit-qgztvpr6mlccwmn8yw5nfy.streamlit.app/
 
 ### Required features
 
