@@ -1,0 +1,73 @@
+{
+  "seed": 17,
+  "holdout_fraction": 0.25,
+  "target_column": "diagnosis_malignant",
+  "positive_label": "Malignant",
+  "negative_label": "Benign",
+  "dataset_profile": {
+    "n_instances": 569,
+    "n_features": 30,
+    "n_malignant": 212,
+    "n_benign": 357,
+    "malignant_rate": 0.3726,
+    "missing_values": 0,
+    "duplicate_rows": 0
+  },
+  "best_params": {
+    "Logistic Regression": {
+      "C": 1.0,
+      "penalty": "l1"
+    },
+    "Decision Tree": {
+      "criterion": "gini",
+      "max_depth": 5,
+      "min_samples_leaf": 8
+    },
+    "kNN": {
+      "n_neighbors": 9,
+      "p": 2,
+      "weights": "distance"
+    },
+    "Naive Bayes": {
+      "var_smoothing": 1e-08
+    },
+    "Random Forest (Ensemble)": {
+      "max_depth": 6,
+      "max_features": 0.4,
+      "min_samples_leaf": 2,
+      "n_estimators": 200
+    }
+  },
+  "confusion_matrices_tn_fp_fn_tp": {
+    "Logistic Regression": [
+      89,
+      1,
+      1,
+      52
+    ],
+    "Decision Tree": [
+      87,
+      3,
+      9,
+      44
+    ],
+    "kNN": [
+      90,
+      0,
+      3,
+      50
+    ],
+    "Naive Bayes": [
+      87,
+      3,
+      8,
+      45
+    ],
+    "Random Forest (Ensemble)": [
+      88,
+      2,
+      4,
+      49
+    ]
+  }
+}
