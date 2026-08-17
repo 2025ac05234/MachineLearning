@@ -1,0 +1,13 @@
+# Pinned exactly: the saved .joblib pipelines were fitted with this version of
+# scikit-learn, and unpickling across a different minor version raises warnings.
+scikit-learn==1.7.2
+
+streamlit>=1.49
+pandas>=2.2
+numpy>=2.0
+matplotlib>=3.9
+seaborn>=0.13
+joblib>=1.4
+
+# required by the pandas Styler used for the colour-graded comparison table
+jinja2>=3.1.2
