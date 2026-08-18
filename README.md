@@ -6,9 +6,9 @@ Five classification models trained on the Breast Cancer Wisconsin (Diagnostic)
 dataset, compared on six evaluation metrics and served through an interactive
 Streamlit application.
 
-🔗 **Live app:** https://machinelearninggit-qgztvpr6mlccwmn8yw5nfy.streamlit.app/
-🔗 **Repository:** https://github.com/2025ac05234/MachineLearning.git
+🔗 **Live app:** https://machinelearninggit-qgztvpr6mlccwmn8yw5nfy.streamlit.app
 
+🔗 **Repository:** https://github.com/2025ac05234/MachineLearning
 
 ---
 
@@ -99,7 +99,7 @@ values) — giving 10 × 3 = 30 columns such as `mean_radius`, `radius_error` an
 
 ## c. GitHub Repository Link
 
-https://github.com/2025ac05234/MachineLearning.git
+https://github.com/2025ac05234/MachineLearning
 
 ```
 project-folder/
@@ -130,6 +130,8 @@ python model/train_models.py     # retrains, rewrites artifacts/ and test_data.c
 streamlit run app.py             # opens the app at localhost:8501
 ```
 
+The seed is fixed at 17 throughout, so a rerun reproduces every figure in this
+README exactly.
 
 ---
 
@@ -181,7 +183,7 @@ member of the family is the correct choice here.
 | **Logistic Regression** | **Best model on this dataset.** Top score on five of six metrics (Accuracy 0.9860, AUC 0.9979, Recall 0.9811, F1 0.9811, MCC 0.9700) and the lowest error count of all — a single false negative and a single false positive out of 143 patients. The reason is structural rather than lucky: after standardisation the two classes are very close to linearly separable, so a linear decision boundary is genuinely the right hypothesis class. CV selected an **L1 penalty**, which drives **14 of the 30 coefficients to exactly zero** and neutralises the mean/perimeter/area redundancy instead of being confused by it — it keeps one member of each collinear block and discards the rest. The surviving weights are led by `worst_area` (+4.39), `radius_error` (+2.31), `worst_texture` (+1.37) and `mean_concave_points` (+1.17) — clinically sensible drivers of malignancy, which makes the model both the most accurate *and* the most explainable of the five. |
 | **Decision Tree** | **Weakest model, by a clear margin** (MCC 0.8193, AUC 0.9461). It misses **9 of 53 malignancies** — nine times the winner's false-negative count. Two things hurt it. First, a single tree makes axis-aligned splits on one feature at a time, so it cannot represent the smooth diagonal boundary the data actually has; it approximates it with a staircase and loses recall at every step. Second, CV had to prune it hard (`max_depth=5`, `min_samples_leaf=8`) to control the overfitting an unrestricted tree shows on 426 rows, and that pruning is exactly what costs sensitivity. Its low AUC also reflects coarse probability estimates: a depth-5 tree can only emit as many distinct scores as it has leaves, so its ranking of patients is inherently blunt. |
 | **kNN** | **Strong runner-up** (MCC 0.9555, Accuracy 0.9790) and the only model with **perfect precision — zero false positives**: every patient it flagged as malignant genuinely was. The trade-off is 3 missed malignancies, which for a screening tool is the wrong direction to err. Distance-weighted voting over 9 neighbours works well because standardisation puts all 30 features on comparable footing and the malignant cases form a compact region of that space. Two practical caveats: kNN is the only model here that must carry all 426 training rows at inference time, and its performance is entirely contingent on the scaler — remove it and `mean_area` alone would dominate every distance computation. |
-| **Naive Bayes** | **The most interesting split between metrics in the whole table:** AUC 0.9885 — third best, essentially level with the Random Forest — but MCC only 0.8343 and 8 missed malignancies. The gap tells a specific story. A high AUC means the model *ranks* patients by risk almost as well as the winners; the poor MCC means its probabilities are badly calibrated, so the default 0.50 cut-off lands in the wrong place. That miscalibration is the direct consequence of the conditional-independence assumption: with `mean_radius`, `mean_perimeter` and `mean_area` correlating above 0.98, the model multiplies what is effectively the same evidence three times and produces over-confident, saturated posteriors. NB is the model that would benefit most from threshold tuning — which is why the app exposes a threshold slider. |
+| **Naive Bayes** | **The most interesting split between metrics in the whole table:** AUC 0.9885 — third best, essentially level with the Random Forest — but MCC only 0.8343 and 8 missed malignancies. The gap tells a specific story. A high AUC means the model *ranks* patients by risk almost as well as the winners; the poor MCC means its probabilities are badly calibrated, so the default 0.50 cut-off lands in the wrong place. That miscalibration is the direct consequence of the conditional-independence assumption: with `mean_radius`, `mean_perimeter` and `mean_area` correlating above 0.98, the model multiplies what is effectively the same evidence three times and produces over-confident, saturated posteriors. NB is the model that would benefit most from threshold tuning: its ranking is sound, only the cut-off is misplaced. |
 | **Random Forest (Ensemble)** | **Solid third place** (MCC 0.9098, AUC 0.9931, 4 false negatives) and a comfortable improvement on the single Decision Tree it is built from — MCC rises from 0.8193 to 0.9098, a textbook demonstration of variance reduction through bagging and feature subsampling. Notably it still does **not** beat plain logistic regression. This is the honest lesson of the exercise: ensembles are not automatically superior. Their advantage is capturing non-linear interactions, and with only 426 training rows of near-linearly-separable data there is little non-linearity to capture, so the extra capacity buys nothing while the axis-aligned base learners retain the same handicap as the single tree. It is, however, the most robust option — no scaling required, insensitive to outliers, and its top feature importances (`worst_perimeter` 0.279, `worst_area` 0.173, `worst_radius` 0.148, `worst_concave_points` 0.107) independently corroborate the drivers the logistic model selected — two very different algorithms agreeing on the same signal. |
 | **Overall Winner for your dataset?** | **🏆 Logistic Regression.** It wins on Accuracy, AUC, Recall, F1 and MCC, and ties or leads on total errors (2 of 143). It also wins on the criteria beyond the table: it is the cheapest model to train and serve, the smallest artefact on disk (3 KB versus 470 KB for the forest), the only one whose decision function can be read directly as log-odds contributions per feature, and the one that misses the fewest cancers — the error that actually matters in this problem. The result is a reminder that a well-regularised linear model remains a serious baseline, and that on well-engineered, near-separable features it can outperform a tuned ensemble. **Caveat:** the 143-patient screening set is small, so differences of 1–2 misclassifications between Logistic Regression, kNN and Random Forest sit within sampling noise. The reliable conclusion is the *grouping* — {Logistic Regression, kNN, Random Forest} clearly ahead of {Naive Bayes, Decision Tree} — rather than the precise ordering at the top. |
 
@@ -189,7 +191,7 @@ member of the family is the correct choice here.
 
 ## e. Streamlit Application
 
-**Live app:** https://machinelearninggit-qgztvpr6mlccwmn8yw5nfy.streamlit.app/
+**Live app:** https://machinelearninggit-qgztvpr6mlccwmn8yw5nfy.streamlit.app
 
 ### Required features
 
@@ -197,25 +199,13 @@ member of the family is the correct choice here.
 |---|---|---|
 | a | **Dataset upload option (CSV)** | Sidebar → *1 · Screening data* → file uploader. Accepts `test_data.csv` (143 rows). A checkbox loads the bundled copy if no file is uploaded. |
 | b | **Model selection dropdown** | Sidebar → *2 · Model* → selectbox with all five classifiers plus a **Compare all models** mode. |
-| c | **Display of evaluation metrics** | Six metric cards (Accuracy, AUC, Precision, Recall, F1, MCC) for the selected model; a colour-graded comparison table across all five in Compare mode. |
-| d | **Confusion matrix / classification report** | Tabbed panel: *Confusion matrix* (annotated heatmap plus a TN/FP/FN/TP breakdown table), *Classification report* (per-class precision/recall/F1/support), *ROC curve*. |
+| c | **Display of evaluation metrics** | Six metric cards (Accuracy, AUC, Precision, Recall, F1, MCC) for the selected model; a comparison table across all five in Compare mode. |
+| d | **Confusion matrix / classification report** | Tabbed panel: *Confusion matrix* (annotated heatmap plus a TN/FP/FN/TP breakdown table) and *Classification report* (per-class precision, recall, F1 and support). |
 
-### Additional features built beyond the requirement
-
-- **Decision-threshold slider (0.05 – 0.95)** — lets an evaluator trade precision
-  for recall interactively and see the false-negative count respond. This is the
-  screening argument from the problem statement made tangible, and it is the
-  clearest way to see Naive Bayes' calibration problem.
-- **Compare-all mode** — overlaid ROC curves for the five models and a grouped
-  metric bar chart on one screen.
-- **Upload schema validation** — the app checks an uploaded CSV against the
-  saved `feature_order.joblib` and names any missing columns instead of throwing
-  a stack trace.
-- **Label-free operation** — if the uploaded CSV has no `diagnosis_malignant`
-  column the app still produces predictions, and explains that metrics are
-  unavailable.
-- **Per-patient prediction table** with malignancy probabilities, a correctness
-  flag, and a CSV download button.
+All predictions use a 0.50 cut-off applied with a strict `>`, which reproduces
+scikit-learn's `.predict()` exactly — an exact 50/50 tie (which a decision-tree
+leaf can genuinely hold) therefore resolves to Benign, so the app's figures match
+the training script and the comparison table above to four decimals.
 
 ### How to reproduce the assignment results in the app
 

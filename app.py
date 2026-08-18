@@ -3,8 +3,7 @@ Breast Tumour Malignancy Screening - interactive model explorer
 ML Assignment 2 | M.Tech (AIML/DSE), BITS Pilani WILP
 
 Upload the held-out screening set (test_data.csv), pick a classifier and
-inspect how it behaves: headline metrics, confusion matrix, classification
-report, ROC curve and per-patient predictions.
+inspect its evaluation metrics, confusion matrix and classification report.
 """
 
 from pathlib import Path
@@ -24,7 +23,6 @@ from sklearn.metrics import (
     precision_score,
     recall_score,
     roc_auc_score,
-    roc_curve,
 )
 
 # ------------------------------------------------------------------ config
@@ -84,22 +82,21 @@ def load_bundled_testset() -> pd.DataFrame | None:
     return pd.read_csv(path) if path.exists() else None
 
 
-def classify(proba: np.ndarray, cutoff: float) -> np.ndarray:
-    """Turn malignancy probabilities into labels at a chosen cut-off.
+def classify(proba: np.ndarray) -> np.ndarray:
+    """Label a patient malignant when P(malignant) exceeds 0.50.
 
     A strict `>` is deliberate. scikit-learn's own `.predict()` takes the
     argmax of the class probabilities, which sends an exact 50/50 tie to the
     *negative* class. Decision-tree leaves genuinely can hold p = 0.500, so
     using `>=` here would silently disagree with `.predict()` and this app
-    would report different numbers from the training script. With `>`, a
-    cut-off of 0.50 reproduces `.predict()` exactly.
+    would report different numbers from the training script.
     """
-    return (proba > cutoff).astype(int)
+    return (proba > 0.50).astype(int)
 
 
-def evaluate(model, X, y_true, cutoff: float = 0.50):
+def evaluate(model, X, y_true):
     y_proba = model.predict_proba(X)[:, 1]
-    y_pred = classify(y_proba, cutoff)
+    y_pred = classify(y_proba)
     scores = {
         "Accuracy": accuracy_score(y_true, y_pred),
         "AUC": roc_auc_score(y_true, y_proba),
@@ -108,7 +105,7 @@ def evaluate(model, X, y_true, cutoff: float = 0.50):
         "F1": f1_score(y_true, y_pred, zero_division=0),
         "MCC": matthews_corrcoef(y_true, y_pred),
     }
-    return scores, y_pred, y_proba
+    return scores, y_pred
 
 
 def plot_confusion(cm: np.ndarray, title: str):
@@ -121,19 +118,6 @@ def plot_confusion(cm: np.ndarray, title: str):
     ax.set_xlabel("Predicted")
     ax.set_ylabel("Actual")
     ax.set_title(title, fontsize=10)
-    fig.tight_layout()
-    return fig
-
-
-def plot_roc(curves: dict):
-    fig, ax = plt.subplots(figsize=(5.2, 4.0))
-    for label, (fpr, tpr, auc_value) in curves.items():
-        ax.plot(fpr, tpr, linewidth=1.8, label=f"{label} (AUC={auc_value:.3f})")
-    ax.plot([0, 1], [0, 1], "k--", linewidth=0.9, label="Chance")
-    ax.set_xlabel("False positive rate")
-    ax.set_ylabel("True positive rate")
-    ax.set_title("ROC on uploaded screening set", fontsize=10)
-    ax.legend(fontsize=7, loc="lower right")
     fig.tight_layout()
     return fig
 
@@ -173,12 +157,6 @@ with st.sidebar:
         index=0,
     )
 
-    st.header("3 · Decision threshold")
-    threshold = st.slider(
-        "Malignant probability cut-off", 0.05, 0.95, 0.50, 0.05,
-        help="Lower the cut-off to trade precision for recall — in screening, "
-             "a missed malignancy costs more than a false alarm.",
-    )
     st.caption("Assignment 2 · M.Tech AIML/DSE · BITS Pilani WILP")
 
 # ------------------------------------------------------------------ data in
@@ -226,47 +204,24 @@ if expected_path.exists():
 if model_choice == "Compare all models":
     st.subheader("Model comparison on this screening set")
 
-    st.caption(
-        f"Decision cut-off: **{threshold:.2f}** — at the default 0.50 this table "
-        "reproduces the comparison table in the README exactly."
-    )
-
-    rows, curves = [], {}
-    for label, model in models.items():
-        if has_labels:
-            scores, _, proba = evaluate(model, X, y, threshold)
-            rows.append({"ML Model Name": label, **scores})
-            fpr, tpr, _ = roc_curve(y, proba)
-            curves[label] = (fpr, tpr, scores["AUC"])
-
     if has_labels:
+        rows = []
+        for label, model in models.items():
+            scores, _ = evaluate(model, X, y)
+            rows.append({"ML Model Name": label, **scores})
+
         table = pd.DataFrame(rows).sort_values("MCC", ascending=False)
         st.dataframe(
-            table.style.format({c: "{:.4f}" for c in table.columns[1:]})
-                 .background_gradient(cmap="Greens", subset=list(table.columns[1:])),
+            table.style.format({c: "{:.4f}" for c in table.columns[1:]}),
             width="stretch", hide_index=True,
         )
-        best = table.iloc[0]["ML Model Name"]
-        st.info(f"🏆 Highest MCC on this data: **{best}**")
-
-        left, right = st.columns([1.1, 1])
-        with left:
-            st.pyplot(plot_roc(curves))
-        with right:
-            melted = table.melt(id_vars="ML Model Name",
-                                var_name="Metric", value_name="Score")
-            fig, ax = plt.subplots(figsize=(5.4, 4.0))
-            sns.barplot(melted, x="Metric", y="Score", hue="ML Model Name", ax=ax)
-            ax.set_ylim(0.75, 1.005)
-            ax.set_xlabel("")
-            ax.legend(fontsize=6, ncol=2, loc="lower left")
-            ax.tick_params(axis="x", labelrotation=30, labelsize=8)
-            ax.set_title("Metric comparison", fontsize=10)
-            fig.tight_layout()
-            st.pyplot(fig)
+        st.info(f"🏆 Highest MCC on this data: "
+                f"**{table.iloc[0]['ML Model Name']}**")
+        st.caption("Select a single model in the sidebar to see its confusion "
+                   "matrix and classification report.")
     else:
         preds = pd.DataFrame({
-            label: np.where(classify(m.predict_proba(X)[:, 1], threshold) == 1,
+            label: np.where(classify(m.predict_proba(X)[:, 1]) == 1,
                             "Malignant", "Benign")
             for label, m in models.items()
         })
@@ -274,26 +229,17 @@ if model_choice == "Compare all models":
 
 else:
     model = models[model_choice]
-    proba = model.predict_proba(X)[:, 1]
-    pred = classify(proba, threshold)
-
-    st.subheader(f"{model_choice} — threshold {threshold:.2f}")
+    st.subheader(model_choice)
 
     if has_labels:
+        scores, pred = evaluate(model, X, y)
+
         cols = st.columns(6)
-        headline = {
-            "Accuracy": accuracy_score(y, pred),
-            "AUC": roc_auc_score(y, proba),
-            "Precision": precision_score(y, pred, zero_division=0),
-            "Recall": recall_score(y, pred, zero_division=0),
-            "F1": f1_score(y, pred, zero_division=0),
-            "MCC": matthews_corrcoef(y, pred),
-        }
-        for col, (name, value) in zip(cols, headline.items()):
+        for col, (name, value) in zip(cols, scores.items()):
             col.metric(name, f"{value:.4f}")
 
-        tab_cm, tab_report, tab_roc = st.tabs(
-            ["Confusion matrix", "Classification report", "ROC curve"]
+        tab_cm, tab_report = st.tabs(
+            ["Confusion matrix", "Classification report"]
         )
         with tab_cm:
             cm = confusion_matrix(y, pred)
@@ -314,26 +260,16 @@ else:
                 )
         with tab_report:
             report = classification_report(
-                y, pred, target_names=CLASS_NAMES, output_dict=True, zero_division=0
+                y, pred, target_names=CLASS_NAMES, output_dict=True,
+                zero_division=0,
             )
-            st.dataframe(pd.DataFrame(report).T.round(4),
-                         width="stretch")
-        with tab_roc:
-            fpr, tpr, _ = roc_curve(y, proba)
-            st.pyplot(plot_roc({model_choice: (fpr, tpr, roc_auc_score(y, proba))}))
-
-    st.subheader("Per-patient predictions")
-    out = pd.DataFrame({
-        "P(malignant)": proba.round(4),
-        "Prediction": np.where(pred == 1, "Malignant", "Benign"),
-    })
-    if has_labels:
-        out.insert(0, "Actual", np.where(y == 1, "Malignant", "Benign"))
-        out["Correct"] = np.where(pred == y.values, "✓", "✗")
-    st.dataframe(out, width="stretch", height=320)
-    st.download_button(
-        "⬇ Download predictions as CSV",
-        out.to_csv(index=False).encode(),
-        file_name=f"predictions_{model_choice.lower().replace(' ', '_')}.csv",
-        mime="text/csv",
-    )
+            st.dataframe(pd.DataFrame(report).T.round(4), width="stretch")
+    else:
+        proba = model.predict_proba(X)[:, 1]
+        st.dataframe(
+            pd.DataFrame({
+                "Prediction": np.where(classify(proba) == 1,
+                                       "Malignant", "Benign"),
+            }),
+            width="stretch",
+        )
