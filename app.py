@@ -46,7 +46,6 @@ st.set_page_config(
     layout="wide",
 )
 
-# a small amount of custom CSS so the app does not look like the default template
 st.markdown(
     """
     <style>
